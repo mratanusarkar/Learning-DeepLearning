@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="micrograd",
-    version="0.1.0",
+    version="0.1.1",
     author="Atanu Sarkar",
     author_email="mratanusarkar@gmail.com",
     description="An experimentation on top of Andrej Karpathy's micrograd (https://github.com/karpathy/micrograd)",
