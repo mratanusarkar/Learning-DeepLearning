@@ -76,6 +76,14 @@ class NoobNeuron:
         out.label=f'{self.label} : out'
 
         return out
+    
+    def parameters(self):
+        """
+        return a list of params of the neuron: weights & biases
+        """
+        
+        params = self.w + [self.b]
+        return params
 
 class NoobLayer:
 
@@ -125,6 +133,17 @@ class NoobLayer:
 
         outs = [n(x) for n in self.neurons]
         return outs
+    
+    def parameters(self):
+        """
+        return an extended list of all params in all the neurons of the layer
+        """
+        
+        params = []
+        for neuron in self.neurons:
+            ps = neuron.parameters()
+            params.extend(ps)
+        return params
 
 class NoobMLP:
     
@@ -181,6 +200,17 @@ class NoobMLP:
         for layer in self.layers:
             x = layer(x)
         return x
+    
+    def parameters(self):
+        """
+        return an extended list of all params in all the layers of the mlp
+        """
+        
+        params = []
+        for layer in self.layers:
+            ps = layer.parameters()
+            params.extend(ps)
+        return params
 
 
 # original micrograd Neuron, Layer and MLP that is similar to PyTorch API
@@ -194,6 +224,9 @@ class Neuron:
         body = sum((wi * xi for wi, xi in zip(self.w, x)), self.b)
         out = body.tanh()
         return out
+    
+    def parameters(self):
+        return self.w + [self.b]
 
 class Layer:
 
@@ -204,6 +237,9 @@ class Layer:
         outs = [n(x) for n in self.neurons]
         outs = outs[0] if len(outs) == 1 else outs
         return outs
+    
+    def parameters(self):
+        return [p for neuron in self.neurons for p in neuron.parameters()]
 
 class MLP:
 
@@ -215,3 +251,6 @@ class MLP:
         for layer in self.layers:
             x = layer(x)
         return x
+    
+    def parameters(self):
+        return [p for layer in self.layers for p in layer.parameters()]
