@@ -1,11 +1,29 @@
 import random
 from micrograd.engine import Value
 
+# base module class
+class Module:
+
+    def zero_grad(self):
+        """
+        resets gradient to zero in the model parameter Value object
+        """
+        
+        for p in self.parameters():
+            p.grad = 0
+
+    def parameters(self):
+        """
+        return a list of model parameters
+        """
+        
+        return []
+
 
 # Karpathy's micrograd Neuron, Layer and MLP for Noobs!
-class NoobNeuron:
+class NoobNeuron(Module):
 
-    def __init__(self, n_inputs, label='') -> None:
+    def __init__(self, n_inputs, nonlin='', label='') -> None:
         """
         Karpathy's micrograd Neuron for Noobs!
         Constructs a neuron that has `n_inputs` number of inputs and assigns random weights & bias to the neuron
@@ -15,11 +33,17 @@ class NoobNeuron:
             n_inputs : int
                 number of inputs entering into the neuron
             
+            nonlin : str
+                non linearity or activation function of the neuron
+                choices: 'tanh', 'relu', 'none'
+                if left blank, tanh will be applied. if 'none', there won't be any nonlinearity.
+            
             label : str
                 (optional) the name or label of the Neuron
         """
 
         self.label = label
+        self.nonlin = nonlin
         self.w = [Value(random.uniform(-1,1)) for _ in range(n_inputs)]
         self.b = Value(random.uniform(-1,1))
 
@@ -72,7 +96,14 @@ class NoobNeuron:
         body = sum + b;     body.label=f'{self.label} : body'
 
         # the net signal passes through a non-linear activation function
-        out = body.tanh()
+        if self.nonlin == 'tanh':
+            out = body.tanh()
+        elif self.nonlin == 'relu':
+            out = body.relu()
+        elif self.nonlin == 'none':
+            out = body
+        else:
+            out = body.tanh() 
         out.label=f'{self.label} : out'
 
         return out
@@ -85,9 +116,9 @@ class NoobNeuron:
         params = self.w + [self.b]
         return params
 
-class NoobLayer:
+class NoobLayer(Module):
 
-    def __init__(self, n_neurons_prev, n_neurons_curr, label='') -> None:
+    def __init__(self, n_neurons_prev, n_neurons_curr, nonlin='', label='') -> None:
         """
         Karpathy's micrograd Layer for Noobs!
         Constructs a Layer, i.e array of Neurons, that has `n_neurons_curr` number of neurons in it.
@@ -104,13 +135,18 @@ class NoobLayer:
             n_neurons_curr : int
                 number of neurons in this current layer, or number of output lines exiting this layer
             
+            nonlin : str
+                non linearity or activation function of the neuron
+                choices: 'tanh', 'relu', 'none'
+                if left blank, tanh will be applied. if 'none', there won't be any nonlinearity.
+            
             label : str
                 (optional) the name or label of the Layer, 
                 where each Neuron in the Layer will be labeled as: `{label} N:{i}`
         """
         
         self.label = label
-        self.neurons = [NoobNeuron(n_neurons_prev, f'{self.label} N:{i}') for i in range(n_neurons_curr)]
+        self.neurons = [NoobNeuron(n_neurons_prev, nonlin, f'{self.label} N:{i}') for i in range(n_neurons_curr)]
 
     def __call__(self, x) -> list[Value]:
         """
@@ -145,9 +181,9 @@ class NoobLayer:
             params.extend(ps)
         return params
 
-class NoobMLP:
+class NoobMLP(Module):
     
-    def __init__(self, n_inputs, neurons_per_layer, label='') -> None:
+    def __init__(self, n_inputs, neurons_per_layer, nonlin='', label='') -> None:
         """
         Karpathy's micrograd MLP for Noobs!
         Constructs a fully connected Multilayer Perceptron.
@@ -163,6 +199,11 @@ class NoobMLP:
             neurons_per_layer : list(int)
                 a list specifying the number of neurons in each layer of the neural network
             
+            nonlin : str
+                non linearity or activation function of the neuron
+                choices: 'tanh', 'relu', 'none'
+                if left blank, tanh will be applied. if 'none', there won't be any nonlinearity.
+            
             label : str
                 (optional) the name or label of the entire MLP network (incase you want to create multiple networks and connect them) 
                 each Neuron in the Layer will be labeled as: `{label} L:{i} N:{i} : <node-type>`,
@@ -176,7 +217,7 @@ class NoobMLP:
 
         self.label = label
         layer_sizes = [n_inputs] + neurons_per_layer
-        self.layers = [NoobLayer(layer_sizes[i], layer_sizes[i+1], f'{self.label} L:{i+1}') for i in range(len(neurons_per_layer))]
+        self.layers = [NoobLayer(layer_sizes[i], layer_sizes[i+1], nonlin if i!=len(neurons_per_layer)-1 else 'none', f'{self.label} L:{i+1}') for i in range(len(neurons_per_layer))]
 
     def __call__(self, x) -> list[Value]:
         """
@@ -214,24 +255,25 @@ class NoobMLP:
 
 
 # original micrograd Neuron, Layer and MLP that is similar to PyTorch API
-class Neuron:
+class Neuron(Module):
 
-    def __init__(self, nin) -> None:
+    def __init__(self, nin, nonlin=True) -> None:
         self.w = [Value(random.uniform(-1,1)) for _ in range(nin)]
-        self.b = Value(random.uniform(-1,1))
+        self.b = Value(0.0)
+        self.nonlin = nonlin
 
     def __call__(self, x):
         body = sum((wi * xi for wi, xi in zip(self.w, x)), self.b)
-        out = body.tanh()
+        out = body.tanh() if self.nonlin else body
         return out
     
     def parameters(self):
         return self.w + [self.b]
 
-class Layer:
+class Layer(Module):
 
-    def __init__(self, nin, nout) -> None:
-        self.neurons = [Neuron(nin) for _ in range(nout)]
+    def __init__(self, nin, nout, **kwargs) -> None:
+        self.neurons = [Neuron(nin, **kwargs) for _ in range(nout)]
 
     def __call__(self, x):
         outs = [n(x) for n in self.neurons]
@@ -241,11 +283,11 @@ class Layer:
     def parameters(self):
         return [p for neuron in self.neurons for p in neuron.parameters()]
 
-class MLP:
+class MLP(Module):
 
     def __init__(self, nin, nouts) -> None:
         sizes = [nin] + nouts
-        self.layers = [Layer(sizes[i], sizes[i+1]) for i in range(len(nouts))]
+        self.layers = [Layer(sizes[i], sizes[i+1], nonlin=i!=len(nouts)-1) for i in range(len(nouts))]
 
     def __call__(self, x):
         for layer in self.layers:
