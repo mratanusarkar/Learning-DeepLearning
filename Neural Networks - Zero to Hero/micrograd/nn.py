@@ -1,9 +1,27 @@
 import random
 from micrograd.engine import Value
 
+# base module class
+class Module:
+
+    def zero_grad(self):
+        """
+        resets gradient to zero in the model parameter Value object
+        """
+        
+        for p in self.parameters():
+            p.grad = 0
+
+    def parameters(self):
+        """
+        return a list of model parameters
+        """
+        
+        return []
+
 
 # Karpathy's micrograd Neuron, Layer and MLP for Noobs!
-class NoobNeuron:
+class NoobNeuron(Module):
 
     def __init__(self, n_inputs, label='') -> None:
         """
@@ -85,7 +103,7 @@ class NoobNeuron:
         params = self.w + [self.b]
         return params
 
-class NoobLayer:
+class NoobLayer(Module):
 
     def __init__(self, n_neurons_prev, n_neurons_curr, label='') -> None:
         """
@@ -145,7 +163,7 @@ class NoobLayer:
             params.extend(ps)
         return params
 
-class NoobMLP:
+class NoobMLP(Module):
     
     def __init__(self, n_inputs, neurons_per_layer, label='') -> None:
         """
@@ -214,7 +232,7 @@ class NoobMLP:
 
 
 # original micrograd Neuron, Layer and MLP that is similar to PyTorch API
-class Neuron:
+class Neuron(Module):
 
     def __init__(self, nin) -> None:
         self.w = [Value(random.uniform(-1,1)) for _ in range(nin)]
@@ -228,7 +246,7 @@ class Neuron:
     def parameters(self):
         return self.w + [self.b]
 
-class Layer:
+class Layer(Module):
 
     def __init__(self, nin, nout) -> None:
         self.neurons = [Neuron(nin) for _ in range(nout)]
@@ -241,7 +259,7 @@ class Layer:
     def parameters(self):
         return [p for neuron in self.neurons for p in neuron.parameters()]
 
-class MLP:
+class MLP(Module):
 
     def __init__(self, nin, nouts) -> None:
         sizes = [nin] + nouts
