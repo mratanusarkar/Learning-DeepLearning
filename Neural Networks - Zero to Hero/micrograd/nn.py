@@ -23,7 +23,7 @@ class Module:
 # Karpathy's micrograd Neuron, Layer and MLP for Noobs!
 class NoobNeuron(Module):
 
-    def __init__(self, n_inputs, label='') -> None:
+    def __init__(self, n_inputs, nonlin='', label='') -> None:
         """
         Karpathy's micrograd Neuron for Noobs!
         Constructs a neuron that has `n_inputs` number of inputs and assigns random weights & bias to the neuron
@@ -33,11 +33,17 @@ class NoobNeuron(Module):
             n_inputs : int
                 number of inputs entering into the neuron
             
+            nonlin : str
+                non linearity or activation function of the neuron
+                choices: 'tanh', 'relu', 'none'
+                if left blank, tanh will be applied. if 'none', there won't be any nonlinearity.
+            
             label : str
                 (optional) the name or label of the Neuron
         """
 
         self.label = label
+        self.nonlin = nonlin
         self.w = [Value(random.uniform(-1,1)) for _ in range(n_inputs)]
         self.b = Value(random.uniform(-1,1))
 
@@ -90,7 +96,14 @@ class NoobNeuron(Module):
         body = sum + b;     body.label=f'{self.label} : body'
 
         # the net signal passes through a non-linear activation function
-        out = body.tanh()
+        if self.nonlin == 'tanh':
+            out = body.tanh()
+        elif self.nonlin == 'relu':
+            out = body.relu()
+        elif self.nonlin == 'none':
+            out = body
+        else:
+            out = body.tanh() 
         out.label=f'{self.label} : out'
 
         return out
@@ -105,7 +118,7 @@ class NoobNeuron(Module):
 
 class NoobLayer(Module):
 
-    def __init__(self, n_neurons_prev, n_neurons_curr, label='') -> None:
+    def __init__(self, n_neurons_prev, n_neurons_curr, nonlin='', label='') -> None:
         """
         Karpathy's micrograd Layer for Noobs!
         Constructs a Layer, i.e array of Neurons, that has `n_neurons_curr` number of neurons in it.
@@ -122,13 +135,18 @@ class NoobLayer(Module):
             n_neurons_curr : int
                 number of neurons in this current layer, or number of output lines exiting this layer
             
+            nonlin : str
+                non linearity or activation function of the neuron
+                choices: 'tanh', 'relu', 'none'
+                if left blank, tanh will be applied. if 'none', there won't be any nonlinearity.
+            
             label : str
                 (optional) the name or label of the Layer, 
                 where each Neuron in the Layer will be labeled as: `{label} N:{i}`
         """
         
         self.label = label
-        self.neurons = [NoobNeuron(n_neurons_prev, f'{self.label} N:{i}') for i in range(n_neurons_curr)]
+        self.neurons = [NoobNeuron(n_neurons_prev, nonlin, f'{self.label} N:{i}') for i in range(n_neurons_curr)]
 
     def __call__(self, x) -> list[Value]:
         """
@@ -165,7 +183,7 @@ class NoobLayer(Module):
 
 class NoobMLP(Module):
     
-    def __init__(self, n_inputs, neurons_per_layer, label='') -> None:
+    def __init__(self, n_inputs, neurons_per_layer, nonlin='', label='') -> None:
         """
         Karpathy's micrograd MLP for Noobs!
         Constructs a fully connected Multilayer Perceptron.
@@ -181,6 +199,11 @@ class NoobMLP(Module):
             neurons_per_layer : list(int)
                 a list specifying the number of neurons in each layer of the neural network
             
+            nonlin : str
+                non linearity or activation function of the neuron
+                choices: 'tanh', 'relu', 'none'
+                if left blank, tanh will be applied. if 'none', there won't be any nonlinearity.
+            
             label : str
                 (optional) the name or label of the entire MLP network (incase you want to create multiple networks and connect them) 
                 each Neuron in the Layer will be labeled as: `{label} L:{i} N:{i} : <node-type>`,
@@ -194,7 +217,7 @@ class NoobMLP(Module):
 
         self.label = label
         layer_sizes = [n_inputs] + neurons_per_layer
-        self.layers = [NoobLayer(layer_sizes[i], layer_sizes[i+1], f'{self.label} L:{i+1}') for i in range(len(neurons_per_layer))]
+        self.layers = [NoobLayer(layer_sizes[i], layer_sizes[i+1], nonlin if i!=len(neurons_per_layer)-1 else 'none', f'{self.label} L:{i+1}') for i in range(len(neurons_per_layer))]
 
     def __call__(self, x) -> list[Value]:
         """
