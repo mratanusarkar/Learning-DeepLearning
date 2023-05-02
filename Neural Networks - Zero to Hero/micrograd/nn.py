@@ -234,13 +234,14 @@ class NoobMLP(Module):
 # original micrograd Neuron, Layer and MLP that is similar to PyTorch API
 class Neuron(Module):
 
-    def __init__(self, nin) -> None:
+    def __init__(self, nin, nonlin=True) -> None:
         self.w = [Value(random.uniform(-1,1)) for _ in range(nin)]
-        self.b = Value(random.uniform(-1,1))
+        self.b = Value(0.0)
+        self.nonlin = nonlin
 
     def __call__(self, x):
         body = sum((wi * xi for wi, xi in zip(self.w, x)), self.b)
-        out = body.tanh()
+        out = body.tanh() if self.nonlin else body
         return out
     
     def parameters(self):
@@ -248,8 +249,8 @@ class Neuron(Module):
 
 class Layer(Module):
 
-    def __init__(self, nin, nout) -> None:
-        self.neurons = [Neuron(nin) for _ in range(nout)]
+    def __init__(self, nin, nout, **kwargs) -> None:
+        self.neurons = [Neuron(nin, **kwargs) for _ in range(nout)]
 
     def __call__(self, x):
         outs = [n(x) for n in self.neurons]
@@ -263,7 +264,7 @@ class MLP(Module):
 
     def __init__(self, nin, nouts) -> None:
         sizes = [nin] + nouts
-        self.layers = [Layer(sizes[i], sizes[i+1]) for i in range(len(nouts))]
+        self.layers = [Layer(sizes[i], sizes[i+1], nonlin=i!=len(nouts)-1) for i in range(len(nouts))]
 
     def __call__(self, x):
         for layer in self.layers:
